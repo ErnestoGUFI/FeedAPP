@@ -29,41 +29,20 @@
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Esta app necesita acceso a tu ubicación para crear reportes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Esta app necesita acceso a tu cámara para tomar fotos de los reportes."
+        }
+      ]
+    ]
   }
 }
-
-{
-  "expo": {
-    "name": "Feed de Reportes",
-    "slug": "feed-reports",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "web": {
-      "bundler": "metro",
-      "favicon": null
-    }
-  }
-}
-

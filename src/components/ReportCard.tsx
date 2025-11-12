@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { colors } from '../styles/colors';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export type Report = {
   id: string;
@@ -9,7 +8,10 @@ export type Report = {
   neighborhood: string;
   timeAgo: string;
   description: string;
+  imageUri?: string;
   placeholderEmoji?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 type Props = {
@@ -21,7 +23,7 @@ export const ReportCard: React.FC<Props> = ({ report }) => {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={20} color={colors.subtext} />
+          <Text style={styles.avatarText}>👤</Text>
         </View>
         <View style={styles.authorInfo}>
           <Text style={styles.author}>{report.author}</Text>
@@ -31,24 +33,30 @@ export const ReportCard: React.FC<Props> = ({ report }) => {
       </View>
 
       <View style={styles.media}>
-        <Text style={styles.mediaEmoji}>{report.placeholderEmoji || '📷'}</Text>
-        <Text style={styles.mediaCaption}>Imagen del reporte</Text>
+        {report.imageUri ? (
+          <Image source={{ uri: report.imageUri }} style={styles.mediaImage} />
+        ) : (
+          <>
+            <Text style={styles.mediaEmoji}>{report.placeholderEmoji || '📷'}</Text>
+            <Text style={styles.mediaCaption}>Imagen del reporte</Text>
+          </>
+        )}
       </View>
 
       <Text style={styles.description}>{report.description}</Text>
 
       <View style={styles.actionsRow}>
-        <ActionButton icon={<Ionicons name="thumbs-up" size={18} color={colors.like} />} label="Me gusta" />
-        <ActionButton icon={<Ionicons name="chatbubble-ellipses" size={18} color={colors.subtext} />} label="Comentar" />
-        <ActionButton icon={<MaterialCommunityIcons name="share" size={18} color={colors.subtext} />} label="Compartir" />
+        <ActionButton icon="👍" label="Me gusta" />
+        <ActionButton icon="💬" label="Comentar" />
+        <ActionButton icon="📤" label="Compartir" />
       </View>
     </View>
   );
 };
 
-const ActionButton = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+const ActionButton = ({ icon, label }: { icon: string; label: string }) => (
   <TouchableOpacity style={styles.action} activeOpacity={0.85}>
-    <View style={styles.icon}>{icon}</View>
+    <Text style={styles.icon}>{icon}</Text>
     <Text style={styles.actionText}>{label}</Text>
   </TouchableOpacity>
 );
@@ -79,6 +87,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  avatarText: {
+    fontSize: 18,
+  },
   authorInfo: { flex: 1 },
   author: {
     fontSize: 16,
@@ -106,6 +117,12 @@ const styles = StyleSheet.create({
   },
   mediaEmoji: { fontSize: 40 },
   mediaCaption: { marginTop: 8, color: colors.subtext },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
   description: {
     marginHorizontal: 16,
     marginTop: 12,
@@ -126,7 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginHorizontal: 4,
   },
-  icon: { marginRight: 8 },
+  icon: { marginRight: 8, fontSize: 16 },
   actionText: { color: colors.subtext, fontSize: 14 },
 });
 

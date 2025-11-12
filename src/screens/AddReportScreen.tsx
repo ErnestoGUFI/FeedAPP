@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Image, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Image, StyleSheet, ScrollView, Platform, Alert, ActionSheetIOS } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { useReports } from '../context/ReportsContext';
+import { useNavigation } from '@react-navigation/native';
 
 const AddReportScreen: React.FC = () => {
+  const { addReport } = useReports();
+  const navigation = useNavigation();
   const [description, setDescription] = useState('');
-  const [location, setLocation] = useState<string>('Stockton St 1-99, San Francisco, CA');
-  const [address, setAddress] = useState<string>('Stockton St 1-99, San Francisco, CA');
+  const [address, setAddress] = useState<string>('');
   const [image, setImage] = useState<string | null>(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   const handleLocation = async () => {
     setLoadingLoc(true);
@@ -20,30 +25,89 @@ const AddReportScreen: React.FC = () => {
         return;
       }
       let loc = await Location.getCurrentPositionAsync({});
-      const addrArr = await Location.reverseGeocodeAsync({latitude: loc.coords.latitude, longitude: loc.coords.longitude});
+      setLatitude(loc.coords.latitude);
+      setLongitude(loc.coords.longitude);
+      const addrArr = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude
+      });
       let addrString = `${addrArr[0]?.street ?? ''} ${addrArr[0]?.name ?? ''}, ${addrArr[0]?.city ?? ''}, ${addrArr[0]?.region ?? ''}`;
       setAddress(addrString);
-      setLocation(addrString);
     } catch (e) {
       Alert.alert('Error', 'No se pudo obtener la ubicación.');
     }
     setLoadingLoc(false);
   };
 
-  const handlePickImage = async () => {
-    let perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert('Permiso denegado', 'Permite acceso a tus fotos para continuar.');
-      return;
+  const handlePickImage = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            handleTakePhoto();
+          } else if (buttonIndex === 2) {
+            handlePickFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Seleccionar imagen',
+        '¿De dónde quieres seleccionar la imagen?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Cámara', onPress: handleTakePhoto },
+          { text: 'Galería', onPress: handlePickFromGallery },
+        ]
+      );
     }
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permiso denegado', 'Permite acceso a la cámara para continuar.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error al tomar foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto. Por favor intenta de nuevo.');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permiso denegado', 'Permite acceso a tus fotos para continuar.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Por favor intenta de nuevo.');
     }
   };
 
@@ -52,26 +116,53 @@ const AddReportScreen: React.FC = () => {
       Alert.alert('Campos requeridos', 'Completa todos los campos para continuar.');
       return;
     }
-    // Aquí implementar el envío del reporte
+    if (latitude === null || longitude === null) {
+      Alert.alert('Ubicación requerida', 'Por favor activa la ubicación antes de enviar.');
+      return;
+    }
+
+    const newReport = {
+      id: Date.now().toString(),
+      author: 'Usuario',
+      neighborhood: address,
+      timeAgo: 'Hace unos momentos',
+      description: description.trim(),
+      imageUri: image,
+      latitude: latitude,
+      longitude: longitude,
+    };
+
+    addReport(newReport);
     Alert.alert('Reporte enviado', '¡Tu reporte ha sido enviado exitosamente!');
+    
+    // Limpiar formulario
     setDescription('');
     setImage(null);
-    setLocation(address);
+    setAddress('');
+    setLatitude(null);
+    setLongitude(null);
+    
+    // Navegar al feed si es posible
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
-        <Text style={styles.backText}>{'< Atrás'}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>{'< Atrás'}</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Nuevo Reporte</Text>
         <Text style={styles.backText}>{'      '}</Text>
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📍 Ubicación</Text>
         <TouchableOpacity style={styles.locationButton} onPress={handleLocation} disabled={loadingLoc}>
-          <Text style={styles.locationButtonText}>{loadingLoc ? 'Obteniendo ubicación...' : 'Actualizar ubicación'}</Text>
+          <Text style={styles.locationButtonText}>{loadingLoc ? 'Obteniendo ubicación...' : 'Activar ubicación'}</Text>
         </TouchableOpacity>
-        <Text style={styles.locationText}>{address}</Text>
+        <Text style={styles.locationText}>{address || 'No se ha obtenido la ubicación'}</Text>
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📷 Imagen</Text>
